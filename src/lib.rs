@@ -21,18 +21,34 @@ impl Config {
         Ok(Config { origin_dir: origin,destination_dir: destination ,ratio })
     }
 }
-pub fn run(config: Config){
+pub fn run(config: Config) {
     let src_dir = config.origin_dir;
     let dest_dir = config.destination_dir;
     let aspect_ratio_threshold = config.ratio;
     check_exists(&dest_dir);
     for entry in WalkDir::new(src_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) == Option::from("jpg") {
-            let file = File::open(path).expect("Failed to open image file");
+        if path.extension().and_then(|ext| ext.to_str()) == Some("jpg") {
+            println!("Processing file: {:?}", path);
+            let file = match File::open(path) {
+                Ok(file) => file,
+                Err(_) => {
+                    eprintln!("Failed to open image file: {:?}", path);
+                    continue;
+                }
+            };
             let mut decoder = Decoder::new(BufReader::new(file));
-            decoder.read_info().expect("Failed to read image metadata");
-            let metadata = decoder.info().unwrap();
+            if let Err(_) = decoder.read_info() {
+                eprintln!("Failed to read image metadata: {:?}", path);
+                continue;
+            }
+            let metadata = match decoder.info() {
+                Some(info) => info,
+                None => {
+                    eprintln!("Failed to get image metadata: {:?}", path);
+                    continue;
+                }
+            };
             let width = metadata.width as f32;
             let height = metadata.height as f32;
             let aspect_ratio = width / height;
@@ -40,8 +56,11 @@ pub fn run(config: Config){
             if aspect_ratio > aspect_ratio_threshold {
                 let file_name = path.file_name().unwrap();
                 let dest_path = Path::new(&dest_dir).join(file_name);
-                fs::rename(path, dest_path).expect("Failed to move file");
-                println!("Moved: {:?}", file_name);
+                if let Err(_) = fs::rename(path, dest_path) {
+                    eprintln!("Failed to move file: {:?}", path);
+                } else {
+                    println!("Moved: {:?}", file_name);
+                }
             }
         }
     }
