@@ -1,0 +1,8 @@
+[package]
+name = "DesktopImageFilter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+walkdir = "2.3.2"
+jpeg-decoder = "0.2.0"
