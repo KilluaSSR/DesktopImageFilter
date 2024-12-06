@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
@@ -26,40 +27,45 @@ pub fn run(config: Config) {
     let dest_dir = config.destination_dir;
     let aspect_ratio_threshold = config.ratio;
     check_exists(&dest_dir);
+
+    let allowed_extensions: HashSet<&str> = ["jpg", "jpeg", "png",].iter().cloned().collect();
+
     for entry in WalkDir::new(src_dir).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) == Some("jpg") {
-            println!("Processing file: {:?}", path);
-            let file = match File::open(path) {
-                Ok(file) => file,
-                Err(_) => {
-                    eprintln!("Failed to open image file: {:?}", path);
+        if let Some(ext) = path.extension().and_then(|ext| ext.to_str()).map(|ext| ext.to_lowercase()) {
+            if allowed_extensions.contains(ext.as_str()) {
+                println!("Processing file: {:?}", path);
+                let file = match File::open(path) {
+                    Ok(file) => file,
+                    Err(_) => {
+                        eprintln!("Failed to open image file: {:?}", path);
+                        continue;
+                    }
+                };
+                let mut decoder = Decoder::new(BufReader::new(file));
+                if let Err(_) = decoder.read_info() {
+                    eprintln!("Failed to read image metadata: {:?}", path);
                     continue;
                 }
-            };
-            let mut decoder = Decoder::new(BufReader::new(file));
-            if let Err(_) = decoder.read_info() {
-                eprintln!("Failed to read image metadata: {:?}", path);
-                continue;
-            }
-            let metadata = match decoder.info() {
-                Some(info) => info,
-                None => {
-                    eprintln!("Failed to get image metadata: {:?}", path);
-                    continue;
-                }
-            };
-            let width = metadata.width as f32;
-            let height = metadata.height as f32;
-            let aspect_ratio = width / height;
+                let metadata = match decoder.info() {
+                    Some(info) => info,
+                    None => {
+                        eprintln!("Failed to get image metadata: {:?}", path);
+                        continue;
+                    }
+                };
+                let width = metadata.width as f32;
+                let height = metadata.height as f32;
+                let aspect_ratio = width / height;
 
-            if aspect_ratio > aspect_ratio_threshold {
-                let file_name = path.file_name().unwrap();
-                let dest_path = Path::new(&dest_dir).join(file_name);
-                if let Err(_) = fs::rename(path, dest_path) {
-                    eprintln!("Failed to move file: {:?}", path);
-                } else {
-                    println!("Moved: {:?}", file_name);
+                if aspect_ratio > aspect_ratio_threshold {
+                    let file_name = path.file_name().unwrap();
+                    let dest_path = Path::new(&dest_dir).join(file_name);
+                    if let Err(_) = fs::rename(path, dest_path) {
+                        eprintln!("Failed to move file: {:?}", path);
+                    } else {
+                        println!("Moved: {:?}", file_name);
+                    }
                 }
             }
         }
