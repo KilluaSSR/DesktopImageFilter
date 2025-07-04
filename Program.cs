@@ -26,10 +26,13 @@ class Program
         Console.WriteLine("Now, scanning for image files...");
 
         var imageFiles = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                .Where(s => s.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                .Where(s => !s.StartsWith(destination + Path.DirectorySeparatorChar) && 
+                            (s.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
                             s.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase) ||
                             s.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                            s.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase));
+                            s.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+                        
+                );
 
         Console.WriteLine(imageFiles.Count() + " image files found.");
 
