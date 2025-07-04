@@ -70,7 +70,7 @@ class Program
     {
         if (imageFiles == null)
             return;
-        foreach (var imageFile in imageFiles)
+        Parallel.ForEach(imageFiles, imageFile =>
         {
             if (IsImageQualified(imageFile, screenInfo, config))
             {
@@ -78,7 +78,7 @@ class Program
                 File.Move(imageFile, destFile);
                 Console.WriteLine($"Moved: {imageFile} -> {destFile}");
             }
-        }
+        });
     }
 
     private static string GetUniqueFilePath(string directory, string fileName)
