@@ -71,10 +71,25 @@ class Program
         {
             if (IsImageQualified(imageFile, screenInfo, config))
             {
-                File.Move(imageFile, Path.Combine(destination, Path.GetFileName(imageFile)));
-                Console.WriteLine($"Moved: {imageFile}");
+                string destFile = GetUniqueFilePath(destination, Path.GetFileName(imageFile));
+                File.Move(imageFile, destFile);
+                Console.WriteLine($"Moved: {imageFile} -> {destFile}");
             }
         }
+    }
+
+    private static string GetUniqueFilePath(string directory, string fileName)
+    {
+        string name = Path.GetFileNameWithoutExtension(fileName);
+        string ext = Path.GetExtension(fileName);
+        string fullPath = Path.Combine(directory, fileName);
+        int count = 1;
+        while (File.Exists(fullPath))
+        {
+            fullPath = Path.Combine(directory, $"{name} ({count}){ext}");
+            count++;
+        }
+        return fullPath;
     }
 
     private static bool IsImageQualified(string imageFile, Tuple<int, int, double> screenInfo, FilterConfig config)
